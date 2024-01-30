@@ -1,12 +1,27 @@
 import tensorflow as tf
 import tkinter as tk
 from PIL import Image, ImageTk
+import numpy as np
+from tkinter import font as tkFont
 
+# Activation functions
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def softmax(z):
+    # Subtracting the max of z for numerical stability
+    z_exp = np.exp(z - np.max(z, axis=0, keepdims=True))
+    return z_exp / np.sum(z_exp, axis=0, keepdims=True)
+
+# Set up the drawing canvas
 class MNISTGallery:
     def __init__(self, root, train_images):
         self.root = root
         self.train_images = train_images
         self.current_index = 0
+
+        # Load the model
+        self.load_model("weights-1.npz")
 
         # Set up the UI components
         self.canvas = tk.Canvas(root, width=280, height=280)
@@ -20,17 +35,27 @@ class MNISTGallery:
 
         btn_next = tk.Button(frame_buttons, text="Next >>", command=self.show_next_image)
         btn_next.pack(side=tk.RIGHT)
-
-        # Uncomment to add a prediction button
-        # btn_predict = tk.Button(frame_buttons, text="Predict Digit", command=self.predict_digit)
-        # btn_predict.pack(side=tk.TOP)
+        self.prob_frame = tk.Frame(root)
+        self.prob_frame.pack(fill='both', expand=True)
+        self.prob_labels = [tk.Label(self.prob_frame, text=f"Digit {i}: 0%") for i in range(10)]
+        for label in self.prob_labels:
+            label.pack(side='top')
 
         self.update_canvas(self.train_images[0])
+
+    def load_model(self, path):
+        # Load the trained weights
+        weights = np.load(path)
+        self.W1 = weights['W1']
+        self.b1 = weights['b1']
+        self.W2 = weights['W2']
+        self.b2 = weights['b2']
 
     def update_canvas(self, image):
         photo = ImageTk.PhotoImage(image=Image.fromarray(image).resize((280, 280)))
         self.canvas.create_image(140, 140, image=photo)
         self.canvas.image = photo  # Keep a reference!
+        self.predict_digit(Image.fromarray(image))
 
     def show_next_image(self):
         self.current_index = (self.current_index + 1) % len(self.train_images)
@@ -40,13 +65,32 @@ class MNISTGallery:
         self.current_index = (self.current_index - 1) % len(self.train_images)
         self.update_canvas(self.train_images[self.current_index])
 
-    # Uncomment to add the prediction function
-    # def predict_digit(self):
-    #     model = tf.keras.models.load_model('mnist_model.h5')  # Path to your model
-    #     image = self.train_images[self.current_index].reshape(1, 28, 28, 1) / 255.0
-    #     prediction = model.predict(image)
-    #     predicted_digit = np.argmax(prediction)
-    #     print(f"Predicted Digit: {predicted_digit}")
+    def predict_digit(self, image):
+        # Preprocess the image
+        img = image.resize((28, 28), Image.Resampling.LANCZOS).convert('L')
+        img = np.array(img)
+        img = img.reshape(1, 28*28).T  # Reshape to match training input
+        img = img / 255.0
+
+        # Forward pass using the loaded model
+        Z1 = np.dot(self.W1, img) + self.b1
+        A1 = sigmoid(Z1)
+        Z2 = np.dot(self.W2, A1) + self.b2
+        A2 = softmax(Z2)
+
+        # Display probabilities and bold the highest one
+        probabilities = A2.flatten() * 100  # Convert to percentage
+        max_prob_index = np.argmax(probabilities)  # Get the index of the highest probability
+
+        # Define a bold font and a regular font
+        bold_font = tkFont.Font(weight="bold")
+        regular_font = tkFont.Font(weight="normal")
+
+        for i, prob in enumerate(probabilities):
+            if i == max_prob_index:
+                self.prob_labels[i].config(text=f"Digit {i}: {prob:.2f}%", font=bold_font)
+            else:
+                self.prob_labels[i].config(text=f"Digit {i}: {prob:.2f}%", font=regular_font)
 
 # Load MNIST data
 mnist = tf.keras.datasets.mnist

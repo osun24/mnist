@@ -2,11 +2,26 @@ import tkinter as tk
 from PIL import Image, ImageDraw
 import numpy as np    
 import math
+from tkinter import font as tkFont
+
+# Activation functions
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def softmax(z):
+    # Subtracting the max of z for numerical stability
+    z_exp = np.exp(z - np.max(z, axis=0, keepdims=True))
+    return z_exp / np.sum(z_exp, axis=0, keepdims=True)
 
 # Set up the drawing canvas
 class DrawingApp:
     def __init__(self, root):
         self.root = root
+
+        # Load the model
+        self.load_model("weights-1.npz")
+
+        # Set up the canvas
         self.canvas = tk.Canvas(root, bg='black', width=280, height=280)
         self.canvas.pack(padx=10, pady=10)
 
@@ -19,7 +34,21 @@ class DrawingApp:
         self.last_x, self.last_y = None, None
         
         self.canvas.bind("<ButtonRelease-1>", self.reset_mouse_pos)
-        
+
+        self.prob_frame = tk.Frame(root)
+        self.prob_frame.pack(fill='both', expand=True)
+        self.prob_labels = [tk.Label(self.prob_frame, text=f"Digit {i}: 0%") for i in range(10)]
+        for label in self.prob_labels:
+            label.pack(side='top')
+    
+    def load_model(self, path):
+        # Load the trained weights
+        weights = np.load(path)
+        self.W1 = weights['W1']
+        self.b1 = weights['b1']
+        self.W2 = weights['W2']
+        self.b2 = weights['b2']
+
     def reset_mouse_pos(self, event):
         self.last_x, self.last_y = None, None
 
@@ -30,27 +59,44 @@ class DrawingApp:
             distance = math.sqrt((x - self.last_x)**2 + (y - self.last_y)**2)
             # Set a minimal distance threshold (for example, 2 pixels)
             if distance > 2:
-                self.canvas.create_line((self.last_x, self.last_y, x, y), width=8, fill='white', capstyle=tk.ROUND, smooth=tk.TRUE, splinesteps=36)
-                self.draw.line((self.last_x, self.last_y, x, y), fill='white', width=8)
+                self.canvas.create_line((self.last_x, self.last_y, x, y), width=12, fill='white', capstyle=tk.ROUND, smooth=tk.TRUE, splinesteps=36)
+                self.draw.line((self.last_x, self.last_y, x, y), fill='white', width=12)
         self.last_x, self.last_y = x, y
+        self.predict_digit()
 
     def reset(self, event=None):
         self.last_x, self.last_y = None, None
         self.canvas.delete("all")
         self.draw.rectangle(((0, 0, 280, 280)), fill='black')
+        self.predict_digit()
 
-    '''def predict_digit(self):
+    def predict_digit(self):
         # Preprocess the image
-        img = self.image.resize((28, 28), Image.ANTIALIAS).convert('L')
+        img = self.image.resize((28, 28), Image.Resampling.LANCZOS).convert('L')
         img = np.array(img)
-        img = img.reshape(1, 28, 28, 1)
+        img = img.reshape(1, 28*28).T  # Reshape to match training input
         img = img / 255.0
 
-        # Load model and predict
-        model = tf.keras.models.load_model('mnist_model.h5')  # Replace with your model path
-        result = model.predict(img)
-        digit = np.argmax(result)
-        print(f"Predicted Digit: {digit}")'''
+        # Forward pass using the loaded model
+        Z1 = np.dot(self.W1, img) + self.b1
+        A1 = sigmoid(Z1)
+        Z2 = np.dot(self.W2, A1) + self.b2
+        A2 = softmax(Z2)
+
+        # Display probabilities and bold the highest one
+        probabilities = A2.flatten() * 100  # Convert to percentage
+        max_prob_index = np.argmax(probabilities)  # Get the index of the highest probability
+
+        # Define a bold font and a regular font
+        bold_font = tkFont.Font(weight="bold")
+        regular_font = tkFont.Font(weight="normal")
+
+        for i, prob in enumerate(probabilities):
+            if i == max_prob_index:
+                self.prob_labels[i].config(text=f"Digit {i}: {prob:.2f}%", font=bold_font)
+            else:
+                self.prob_labels[i].config(text=f"Digit {i}: {prob:.2f}%", font=regular_font)
+
 
 root = tk.Tk()
 app = DrawingApp(root)
