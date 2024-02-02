@@ -5,9 +5,12 @@ import math
 from tkinter import font as tkFont
 
 # Activation functions
+
+# Sigmoid for hidden layers - returns a value between 0 and 1
 def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
+# Softmax used in the output layer for probabilities
 def softmax(z):
     # Subtracting the max of z for numerical stability
     z_exp = np.exp(z - np.max(z, axis=0, keepdims=True))
@@ -29,7 +32,7 @@ class DrawingApp:
         self.image = Image.new("L", (280, 280), 'black')
         self.draw = ImageDraw.Draw(self.image)
 
-        # Set up mouse movement bindings
+        # Set up mouse movement bindings to draw on the canvas nicely 
         self.canvas.bind("<B1-Motion>", self.paint)
         self.last_x, self.last_y = None, None
         
@@ -41,14 +44,15 @@ class DrawingApp:
         for label in self.prob_labels:
             label.pack(side='top')
     
+    # Load the trained weights
     def load_model(self, path):
-        # Load the trained weights
         weights = np.load(path)
         self.W1 = weights['W1']
         self.b1 = weights['b1']
         self.W2 = weights['W2']
         self.b2 = weights['b2']
 
+    # Reset the mouse position - keeps the drawing from connecting lines
     def reset_mouse_pos(self, event):
         self.last_x, self.last_y = None, None
 
@@ -102,8 +106,6 @@ root = tk.Tk()
 app = DrawingApp(root)
 button_frame = tk.Frame(root)
 button_frame.pack(fill='both', expand=True)
-#predict_button = tk.Button(button_frame, text='Predict Digit', command=app.predict_digit)
-#predict_button.pack(side='left', fill='both', expand=True)
 clear_button = tk.Button(button_frame, text='Clear', command=app.reset)
 clear_button.pack(side='right', fill='both', expand=True)
 root.mainloop()

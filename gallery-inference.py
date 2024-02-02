@@ -20,10 +20,10 @@ class MNISTGallery:
         self.train_images = train_images
         self.current_index = 0
 
-        # Load the model
+        # Load the model weights from numpy file
         self.load_model("weights-1.npz")
 
-        # Set up the UI components
+        # Set up the UI components: canvas, buttons, and labels
         self.canvas = tk.Canvas(root, width=280, height=280)
         self.canvas.pack()
 
@@ -43,14 +43,15 @@ class MNISTGallery:
 
         self.update_canvas(self.train_images[0])
 
+    # Load the trained weights
     def load_model(self, path):
-        # Load the trained weights
         weights = np.load(path)
         self.W1 = weights['W1']
         self.b1 = weights['b1']
         self.W2 = weights['W2']
         self.b2 = weights['b2']
 
+    # Update the canvas with the new image and predict the digit
     def update_canvas(self, image):
         photo = ImageTk.PhotoImage(image=Image.fromarray(image).resize((280, 280)))
         self.canvas.create_image(140, 140, image=photo)
@@ -66,23 +67,23 @@ class MNISTGallery:
         self.update_canvas(self.train_images[self.current_index])
 
     def predict_digit(self, image):
-        # Preprocess the image
+        # Preprocess the image: resize to 28x28 and convert to grayscale, then reshape to 784x1
         img = image.resize((28, 28), Image.Resampling.LANCZOS).convert('L')
         img = np.array(img)
-        img = img.reshape(1, 28*28).T  # Reshape to match training input
+        img = img.reshape(1, 28*28).T  
         img = img / 255.0
 
         # Forward pass using the loaded model
         Z1 = np.dot(self.W1, img) + self.b1
         A1 = sigmoid(Z1)
         Z2 = np.dot(self.W2, A1) + self.b2
-        A2 = softmax(Z2)
+        A2 = softmax(Z2) # Softmax for probabilities
 
         # Display probabilities and bold the highest one
         probabilities = A2.flatten() * 100  # Convert to percentage
         max_prob_index = np.argmax(probabilities)  # Get the index of the highest probability
 
-        # Define a bold font and a regular font
+        # Show probabilities in the UI, bolding the highest one
         bold_font = tkFont.Font(weight="bold")
         regular_font = tkFont.Font(weight="normal")
 

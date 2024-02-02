@@ -27,9 +27,11 @@ def initialize_parameters(input_size, hidden_size, output_size):
     return W1, b1, W2, b2
 
 # Activation functions
+# Sigmoid for hidden layers - returns a value between 0 and 1
 def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
+# Softmax used in the output layer for probabilities
 def softmax(z):
     # Subtracting the max of z for numerical stability
     z_exp = np.exp(z - np.max(z, axis=0, keepdims=True))
@@ -49,7 +51,7 @@ def compute_cost(A2, Y):
     cost = np.sum((A2 - Y) ** 2) / m
     return cost
 
-# Backward propagation
+# Backpropagation: calculate gradients for each parameter
 def backward_pass(X, Y, Z1, A1, Z2, A2, W1, W2):
     m = Y.shape[1]
     dZ2 = A2 - Y
@@ -60,7 +62,7 @@ def backward_pass(X, Y, Z1, A1, Z2, A2, W1, W2):
     db1 = np.sum(dZ1, axis=1, keepdims=True) / m
     return dW1, db1, dW2, db2
 
-# Update parameters
+# Update parameters using gradient descent
 def update_parameters(W1, b1, W2, b2, dW1, db1, dW2, db2, learning_rate):
     W1 = W1 - learning_rate * dW1
     b1 = b1 - learning_rate * db1
@@ -91,9 +93,6 @@ def cost_and_accuracy_over_time(cost_history, accuracy_history, iteration,trial)
     # Save
     plt.savefig(f"cost_and_accuracy_over_time-{trial}.png")
 
-    # Show but don't block execution
-    plt.show(block = False)
-
 # Initialize parameters
 input_size = 784 # MNIST images are 28x28 pixels
 hidden_size = 128 # Size of hidden layer
@@ -101,7 +100,7 @@ output_size = 10 # 10 classes (digits 0-9)
 W1, b1, W2, b2 = initialize_parameters(input_size, hidden_size, output_size)
 
 # Example training loop
-num_iterations = 5000
+num_iterations = 1000
 learning_rate = 0.1
 
 # Keep track of cost and accuracy over time
